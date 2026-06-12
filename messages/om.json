@@ -1,0 +1,72 @@
+{
+  "auth": {
+    "signIn": "Seeni",
+    "signingIn": "Seenaa jira...",
+    "username": "Maqaa Fayyadamaa",
+    "password": "Jecha Icciitii",
+    "invalidCredentials": "Maqaa fayyadamaa ykn jecha icciitii dogoggoraa",
+    "changePassword": "Jecha Icciitii Jijjiiri",
+    "newPassword": "Jecha Icciitii Haaraa",
+    "confirmPassword": "Jecha Icciitii Mirkaneessi",
+    "passwordMismatch": "Jechootni icciitii wal hin fakkaatan",
+    "save": "Olkaa'i",
+    "error": "Dogoggora uumame",
+    "passwordHint": "Qubee 8+, qubee guddaa tokko, lakkoofsa tokko, mallattoo addaa tokko"
+  },
+  "nav": {
+    "dashboard": "Gabatee",
+    "payments": "Kaffaltii",
+    "notifications": "Beeksisa",
+    "admin": "Bulchiinsa",
+    "logout": "Ba'i",
+    "light": "ifa",
+    "dark": "Dukkana",
+    "language": "Afaan"
+  },
+  "dashboard": {
+    "title": "Gabatee",
+    "welcome": "Baga Nagaan Dhufte",
+    "totalPaid": "Waliigala Kaffalame",
+    "totalPending": "Eegaa Jiru",
+    "overdue": "Yeroon Darbeera",
+    "recentPayments": "Kaffaltii Dhiyoo",
+    "filterMonth": "Ji'aan Kallattii"
+  },
+  "payments": {
+    "title": "Kaffaltii",
+    "amount": "Baasii",
+    "status": "Haala",
+    "month": "Ji'a",
+    "reference": "Lakkoofsa Wabii",
+    "datePaid": "Guyyaa Kaffalame",
+    "paid": "Kaffalame",
+    "pending": "Eegaa Jiru",
+    "overdue": "Yeroon Darbeera",
+    "nextDue": "Itti Aanu"
+  },
+  "admin": {
+    "title": "Bulchiinsa Fayyadamaa",
+    "addUser": "Fayyadamaa Dabaluu",
+    "editUser": "Fayyadamaa Gulaali",
+    "deleteUser": "Fayyadamaa Haqi",
+    "resetPassword": "Jecha Icciitii Deebi'si",
+    "username": "Maqaa Fayyadamaa",
+    "email": "Imeelii",
+    "phone": "Bilbila",
+    "role": "Gahee",
+    "language": "Afaan",
+    "user": "Fayyadamaa",
+    "admin": "Bulchaa",
+    "confirmDelete": "Fayyadamaa kana haquu barbaaddaa?",
+    "userAdded": "Fayyadamaan milkaa'inaan dabalame",
+    "userUpdated": "Fayyadamaan haaromfame",
+    "userDeleted": "Fayyadamaan haqame"
+  },
+  "notifications": {
+    "title": "Beeksisa",
+    "markAllRead": "Hundaa akka dubbifame mallee'i",
+    "noNotifications": "Beeksisa hin jiru",
+    "paymentDue": "Kaffaltiin guyyoota {days} keessatti dhufa",
+    "paymentReceived": "Kaffaltiin {amount} fuudhan"
+  }
+}
