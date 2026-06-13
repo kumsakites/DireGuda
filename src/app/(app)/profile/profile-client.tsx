@@ -25,7 +25,7 @@ function PwInput({ id, label, value, onChange }: {
           required autoComplete="new-password"
           className="w-full rounded-md border px-3 py-2 pr-10 text-sm bg-background" />
         <button type="button" onClick={() => setShow(s => !s)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          className="absolute right-2 inset-y-0 my-auto h-fit text-muted-foreground hover:text-foreground"
           aria-label="Toggle visibility">
           {show ? <EyeOff size={14} /> : <Eye size={14} />}
         </button>
