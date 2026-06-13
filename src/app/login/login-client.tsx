@@ -184,8 +184,8 @@ function TaglineOverlay({ visible }: { visible: boolean }) {
       }}
       aria-hidden
     >
-      <p className="text-center whitespace-nowrap flex items-center gap-3"
-        style={{ fontSize: "clamp(1.2rem, 3.2vw, 2.8rem)", fontWeight: 800, lineHeight: 1.2 }}>
+      <p className="text-center flex items-center gap-2 flex-wrap justify-center"
+        style={{ fontSize: "clamp(1rem, 5vw, 2.8rem)", fontWeight: 800, lineHeight: 1.3, flexWrap: "wrap", justifyContent: "center" }}>
         {text.split("").map((char, i) => (
           <span
             key={i}
@@ -329,20 +329,20 @@ export default function LoginClient() {
         <ThemeToggle />
       </div>
 
-      <main className="relative min-h-screen flex items-center justify-center" style={{ zIndex: 5 }}>
+      <main className="relative min-h-screen flex items-center justify-center px-4 py-8" style={{ zIndex: 5 }}>
         <AnimatePresence mode="wait">
           {!showForm ? (
             <motion.div key="animation"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.4 }}
-              className="bg-card/80 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl px-10 py-8 min-w-[300px]">
+              className="bg-card/80 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl px-6 py-8 w-full max-w-sm">
               <LoginAnimation onDone={handleIntroDone} />
             </motion.div>
           ) : (
             <motion.div key="card"
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="w-full max-w-sm rounded-2xl border border-white/10 p-8 shadow-2xl bg-card/80 backdrop-blur-md space-y-4">
+              className="w-full max-w-sm rounded-2xl border border-white/10 px-6 py-8 shadow-2xl bg-card/80 backdrop-blur-md space-y-4">
               <h1 className="text-2xl font-bold text-center">{t("signIn")}</h1>
               <motion.form onSubmit={handleSubmit} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                 {error && <p className="text-sm text-destructive text-center">{error}</p>}
