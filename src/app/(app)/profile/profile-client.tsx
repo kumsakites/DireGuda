@@ -177,9 +177,9 @@ export default function ProfileClient({ user }: Props) {
           { label: "Phone", value: user.phone ?? "—" },
           { label: "Role", value: user.role ?? "user" },
         ].map(({ label, value }) => (
-          <div key={label} className="flex justify-between px-4 py-3 text-sm">
-            <span className="text-muted-foreground">{label}</span>
-            <span className="font-medium capitalize">{value}</span>
+          <div key={label} className="flex justify-between gap-4 px-4 py-3 text-sm min-w-0">
+            <span className="text-muted-foreground shrink-0">{label}</span>
+            <span className="font-medium capitalize truncate text-right">{value}</span>
           </div>
         ))}
       </div>
