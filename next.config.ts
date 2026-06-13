@@ -29,6 +29,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  env: {
+    NEXT_TELEMETRY_DISABLED: "1",
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
