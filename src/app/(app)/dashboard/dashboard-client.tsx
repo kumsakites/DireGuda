@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp, Clock, AlertCircle, CheckCircle, Plus, X } from "lucide-react";
+import { TrendingUp, Clock, AlertCircle, CheckCircle, Plus, X, Search } from "lucide-react";
 
 interface Payment {
   _id: string;
@@ -42,6 +42,19 @@ export default function DashboardClient({ payments: initial, stats: initialStats
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ userId: "", amount: "", paymentMonth: currentMonth, status: "pending", referenceNumber: "" });
   const [toast, setToast] = useState("");
+  const [tableQuery, setTableQuery] = useState("");
+
+  const filteredPayments = useMemo(() => {
+    const q = tableQuery.toLowerCase().trim();
+    if (!q) return payments;
+    return payments.filter(p =>
+      (typeof p.userId === "object" ? p.userId.username : p.userId ?? "").toLowerCase().includes(q) ||
+      p.paymentMonth.toLowerCase().includes(q) ||
+      p.status.toLowerCase().includes(q) ||
+      (p.referenceNumber ?? "").toLowerCase().includes(q) ||
+      String(p.amount).includes(q)
+    );
+  }, [payments, tableQuery]);
 
   function handleMonthChange(m: string) {
     setMonth(m);
@@ -180,8 +193,22 @@ export default function DashboardClient({ payments: initial, stats: initialStats
         transition={{ delay: 0.3 }}
         className="rounded-xl border overflow-hidden"
       >
-        <div className="px-4 py-3 border-b bg-muted">
+        <div className="px-4 py-3 border-b bg-muted flex items-center justify-between gap-3 flex-wrap">
           <h2 className="font-semibold">{t("recentPayments")}</h2>
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={tableQuery}
+              onChange={e => setTableQuery(e.target.value)}
+              placeholder="Search payments…"
+              className="rounded-md border pl-8 pr-8 py-1.5 text-sm bg-background w-52"
+            />
+            {tableQuery && (
+              <button onClick={() => setTableQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X size={13} />
+              </button>
+            )}
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -197,9 +224,11 @@ export default function DashboardClient({ payments: initial, stats: initialStats
               </tr>
             </thead>
             <tbody>
-              {payments.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">—</td></tr>
-              ) : payments.map((p, i) => (
+              {filteredPayments.length === 0 ? (
+                <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">
+                  {tableQuery ? `No payments match "${tableQuery}"` : "—"}
+                </td></tr>
+              ) : filteredPayments.map((p, i) => (
                 <motion.tr key={p._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 + i * 0.04 }}
                   className="border-t hover:bg-accent/50 transition-colors">

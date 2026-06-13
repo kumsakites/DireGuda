@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import User, { IUser } from "@/models/User";
 import { getTranslations } from "next-intl/server";
 import AdminUsersClient from "./users-client";
+import PageHeader from "@/components/page-header";
 
 export default async function AdminUsersPage() {
   const session = await auth();
@@ -17,8 +18,8 @@ export default async function AdminUsersPage() {
   const t = await getTranslations("admin");
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
+    <div className="space-y-6">
+      <PageHeader title={t("title")} description="Manage user accounts, roles, and permissions" />
       <AdminUsersClient initialUsers={JSON.parse(JSON.stringify(users))} />
     </div>
   );

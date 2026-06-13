@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Notification from "@/models/Notification";
 import { getTranslations } from "next-intl/server";
 import NotificationsClient from "./notifications-client";
+import PageHeader from "@/components/page-header";
 
 export default async function NotificationsPage() {
   const session = await auth();
@@ -18,8 +19,8 @@ export default async function NotificationsPage() {
   const t = await getTranslations("notifications");
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
+    <div className="space-y-4">
+      <PageHeader title={t("title")} description="Stay updated with your latest activity" />
       <NotificationsClient initialNotifications={JSON.parse(JSON.stringify(notifications))} />
     </div>
   );

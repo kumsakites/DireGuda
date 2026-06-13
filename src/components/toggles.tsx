@@ -21,7 +21,6 @@ export function ThemeToggle() {
 }
 
 export function LanguageToggle() {
-  const t = useTranslations("nav");
   const router = useRouter();
 
   async function toggle(lang: string) {
@@ -30,11 +29,18 @@ export function LanguageToggle() {
   }
 
   return (
-    <div className="flex items-center gap-1">
-      <Globe size={16} className="text-muted-foreground" />
-      <button onClick={() => toggle("en")} className="text-xs hover:underline px-1">EN</button>
-      <span className="text-muted-foreground">|</span>
-      <button onClick={() => toggle("om")} className="text-xs hover:underline px-1">OM</button>
+    <div className="relative flex items-center">
+      <Globe size={14} className="absolute left-2 text-muted-foreground pointer-events-none" />
+      <select
+        onChange={e => toggle(e.target.value)}
+        defaultValue=""
+        className="appearance-none bg-transparent pl-6 pr-2 py-1.5 text-xs rounded-lg hover:bg-accent transition-colors cursor-pointer text-muted-foreground focus:outline-none"
+        aria-label="Select language"
+      >
+        <option value="" disabled hidden>Lang</option>
+        <option value="en">English</option>
+        <option value="om">Afaan Oromo</option>
+      </select>
     </div>
   );
 }

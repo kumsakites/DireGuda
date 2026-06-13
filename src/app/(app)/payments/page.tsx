@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { connectDB } from "@/lib/db";
 import Payment from "@/models/Payment";
 import PaymentsClient from "./payments-client";
+import PageHeader from "@/components/page-header";
 
 export default async function PaymentsPage() {
   const session = await auth();
@@ -14,8 +15,11 @@ export default async function PaymentsPage() {
   } catch { /* DB unavailable */ }
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">My Payments</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Payments"
+        description="View and manage your payment records"
+      />
       <PaymentsClient payments={JSON.parse(JSON.stringify(payments))} isAdmin={session?.user.role === "admin"} />
     </div>
   );

@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { connectDB } from "@/lib/db";
 import Notification from "@/models/Notification";
-import Nav from "@/components/nav";
+import AppShell from "@/components/app-shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -16,11 +16,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } catch { /* DB unavailable */ }
 
   return (
-    <div className="flex min-h-screen">
-      <Nav role={session.user.role} unreadCount={unreadCount} />
-      <main className="flex-1 flex flex-col overflow-auto">
-        {children}
-      </main>
-    </div>
+    <AppShell role={session.user.role} unreadCount={unreadCount}>
+      {children}
+    </AppShell>
   );
 }

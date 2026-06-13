@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, KeyRound, X, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, KeyRound, X, Eye, EyeOff, Search, Users } from "lucide-react";
 
 interface User {
   _id: string;
@@ -21,21 +21,31 @@ const emptyForm = { username: "", email: "", phone: "", role: "user", languagePr
 export default function AdminUsersClient({ initialUsers }: Props) {
   const t = useTranslations("admin");
   const [users, setUsers] = useState<User[]>(initialUsers);
+  const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [toast, setToast] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3000);
-  }
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return users;
+    return users.filter(u =>
+      u.username.toLowerCase().includes(q) ||
+      (u.email ?? "").toLowerCase().includes(q) ||
+      (u.phone ?? "").includes(q) ||
+      u.role.toLowerCase().includes(q) ||
+      u.languagePreference.toLowerCase().includes(q) ||
+      (u.mustChangePassword ? "must change" : "active").includes(q)
+    );
+  }, [users, query]);
 
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(""), 3000); }
   function openAdd() { setEditing(null); setForm(emptyForm); setShowForm(true); }
   function openEdit(u: User) {
     setEditing(u);
-    setForm({ username: u.username, email: u.email ?? "", phone: u.phone ?? "", role: u.role, languagePreference: u.languagePreference });
+    setForm({ username: u.username, email: u.email ?? "", phone: u.phone ?? "", role: u.role, languagePreference: u.languagePreference, password: "" });
     setShowForm(true);
   }
 
@@ -69,7 +79,6 @@ export default function AdminUsersClient({ initialUsers }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -79,24 +88,50 @@ export default function AdminUsersClient({ initialUsers }: Props) {
         )}
       </AnimatePresence>
 
-      <button onClick={openAdd}
-        className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90">
-        <Plus size={16} /> {t("addUser")}
-      </button>
+      {/* Actions row */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search by name, email, phone, role, status…"
+            className="w-full rounded-md border pl-9 pr-4 py-2 text-sm bg-background"
+          />
+          {query && (
+            <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <button onClick={openAdd}
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 shrink-0">
+          <Plus size={16} /> {t("addUser")}
+        </button>
+      </div>
+
+      {/* Result count */}
+      {query && (
+        <p className="text-xs text-muted-foreground">
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for "{query}"
+        </p>
+      )}
 
       {/* User table */}
       <div className="rounded-xl border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted text-muted-foreground">
             <tr>
-              {[t("username"), t("email"), t("phone"), t("role"), t("language")].map(h => (
+              {[t("username"), t("email"), t("phone"), t("role"), t("language"), "Status"].map(h => (
                 <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
               ))}
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
-            {users.map((u, i) => (
+            {filtered.length === 0 ? (
+              <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">No users match your search</td></tr>
+            ) : filtered.map((u, i) => (
               <motion.tr key={u._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
                 className="border-t hover:bg-accent/50 transition-colors">
                 <td className="px-4 py-3 font-medium">{u.username}</td>
@@ -108,6 +143,11 @@ export default function AdminUsersClient({ initialUsers }: Props) {
                   </span>
                 </td>
                 <td className="px-4 py-3 uppercase text-xs">{u.languagePreference}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.mustChangePassword ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"}`}>
+                    {u.mustChangePassword ? "Must change pw" : "Active"}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2 justify-end">
                     <button onClick={() => openEdit(u)} className="p-1.5 rounded hover:bg-accent" aria-label="Edit"><Pencil size={14} /></button>
@@ -179,9 +219,7 @@ export default function AdminUsersClient({ initialUsers }: Props) {
                   <button type="submit" className="flex-1 bg-primary text-primary-foreground py-2 rounded-md text-sm font-medium hover:bg-primary/90">
                     {editing ? t("editUser") : t("addUser")}
                   </button>
-                  <button type="button" onClick={() => setShowForm(false)} className="flex-1 border py-2 rounded-md text-sm">
-                    Cancel
-                  </button>
+                  <button type="button" onClick={() => setShowForm(false)} className="flex-1 border py-2 rounded-md text-sm">Cancel</button>
                 </div>
               </form>
             </motion.div>

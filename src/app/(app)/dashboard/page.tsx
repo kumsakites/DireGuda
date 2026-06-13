@@ -4,6 +4,7 @@ import Payment from "@/models/Payment";
 import User from "@/models/User";
 import { getTranslations } from "next-intl/server";
 import DashboardClient from "./dashboard-client";
+import PageHeader from "@/components/page-header";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const session = await auth();
@@ -36,10 +37,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t("title")}
+        description={session?.user.role === "admin" ? "Overview of all payments and member activity" : "Track your payment history and status"}
+      />
       <DashboardClient
         payments={JSON.parse(JSON.stringify(payments))}
         stats={stats}

@@ -1,10 +1,17 @@
 "use client";
 import { useState, useRef } from "react";
-import { Camera, User, Eye, EyeOff, KeyRound } from "lucide-react";
-import { motion } from "framer-motion";
+import { Camera, User, Eye, EyeOff, KeyRound, Settings, Globe, Bell, ChevronDown, ChevronUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
-  user: { username?: string; email?: string; phone?: string; role?: string; avatar?: string };
+  user: {
+    username?: string;
+    email?: string;
+    phone?: string;
+    role?: string;
+    avatar?: string;
+    languagePreference?: string;
+  };
 }
 
 function PwInput({ id, label, value, onChange }: {
@@ -28,19 +35,52 @@ function PwInput({ id, label, value, onChange }: {
   );
 }
 
+function Section({ title, icon: Icon, children, defaultOpen = false }: {
+  title: string; icon: React.ElementType; children: React.ReactNode; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/50">
+        <span className="flex items-center gap-2"><Icon size={15} />{title}</span>
+        {open ? <ChevronUp size={15} className="text-muted-foreground" /> : <ChevronDown size={15} className="text-muted-foreground" />}
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t">
+            <div className="px-4 py-4 space-y-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function ProfileClient({ user }: Props) {
   const [avatar, setAvatar] = useState(user.avatar ?? null);
   const [uploading, setUploading] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ msg: string; type?: "error" | "success" }>({ msg: "" });
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Password change state
-  const [pwOpen, setPwOpen] = useState(false);
+  // Password
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
+
+  // Settings
+  const [language, setLanguage] = useState(user.languagePreference ?? "en");
+  const [emailNotifs, setEmailNotifs] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
+  function notify(msg: string, type: "success" | "error" = "success") {
+    setToast({ msg, type });
+    setTimeout(() => setToast({ msg: "" }), 3000);
+  }
 
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault();
@@ -55,11 +95,25 @@ export default function ProfileClient({ user }: Props) {
     const data = await res.json().catch(() => ({}));
     setPwLoading(false);
     if (res.ok) {
-      setCurrentPw(""); setNewPw(""); setConfirmPw(""); setPwOpen(false);
-      setToast("Password updated successfully!");
-      setTimeout(() => setToast(""), 3000);
+      setCurrentPw(""); setNewPw(""); setConfirmPw("");
+      notify("Password updated successfully!");
     } else {
       setPwError(data.error ?? "Failed to update password.");
+    }
+  }
+
+  async function handleSettingsSave() {
+    setSettingsLoading(true);
+    const res = await fetch("/api/user/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ languagePreference: language, emailNotifications: emailNotifs }),
+    });
+    setSettingsLoading(false);
+    if (res.ok) {
+      notify("Settings saved!");
+    } else {
+      notify("Failed to save settings.", "error");
     }
   }
 
@@ -71,26 +125,26 @@ export default function ProfileClient({ user }: Props) {
     fd.append("avatar", file);
     const res = await fetch("/api/user/avatar", { method: "POST", body: fd });
     setUploading(false);
+    const data = await res.json();
     if (res.ok) {
-      const data = await res.json();
       setAvatar(data.avatar);
-      setToast("Profile picture updated!");
-      setTimeout(() => setToast(""), 3000);
+      notify("Profile picture updated!");
     } else {
-      const data = await res.json();
-      setToast(data.error ?? "Upload failed");
-      setTimeout(() => setToast(""), 3000);
+      notify(data.error ?? "Upload failed", "error");
     }
   }
 
   return (
     <div className="space-y-6">
-      {toast && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm text-center">
-          {toast}
-        </motion.div>
-      )}
+      {/* Toast */}
+      <AnimatePresence>
+        {toast.msg && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className={`px-4 py-2 rounded-lg text-sm text-center ${toast.type === "error" ? "bg-destructive text-white" : "bg-primary text-primary-foreground"}`}>
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Avatar */}
       <div className="flex flex-col items-center gap-3">
@@ -131,31 +185,63 @@ export default function ProfileClient({ user }: Props) {
       </div>
 
       {/* Change Password */}
-      <div className="rounded-xl border">
-        <button type="button" onClick={() => { setPwOpen(o => !o); setPwError(""); }}
-          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/50 rounded-xl">
-          <span className="flex items-center gap-2"><KeyRound size={15} />Change Password</span>
-          <span className="text-muted-foreground text-xs">{pwOpen ? "▲" : "▼"}</span>
-        </button>
+      <Section title="Change Password" icon={KeyRound}>
+        <form onSubmit={handlePasswordChange} className="space-y-3">
+          {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+          <PwInput id="current-pw" label="Current Password" value={currentPw} onChange={setCurrentPw} />
+          <PwInput id="new-pw" label="New Password" value={newPw} onChange={setNewPw} />
+          <PwInput id="confirm-pw" label="Confirm New Password" value={confirmPw} onChange={setConfirmPw} />
+          <p className="text-xs text-muted-foreground">Min 8 chars · uppercase · number · special character</p>
+          <button type="submit" disabled={pwLoading}
+            className="w-full rounded-md bg-primary text-primary-foreground py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50">
+            {pwLoading ? "Updating…" : "Update Password"}
+          </button>
+        </form>
+      </Section>
 
-        {pwOpen && (
-          <motion.form onSubmit={handlePasswordChange}
-            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-            className="px-4 pb-4 space-y-3 border-t">
-            {pwError && <p className="text-xs text-destructive pt-2">{pwError}</p>}
-            <div className="pt-3 space-y-3">
-              <PwInput id="current-pw" label="Current Password" value={currentPw} onChange={setCurrentPw} />
-              <PwInput id="new-pw" label="New Password" value={newPw} onChange={setNewPw} />
-              <PwInput id="confirm-pw" label="Confirm New Password" value={confirmPw} onChange={setConfirmPw} />
+      {/* Account Settings */}
+      <Section title="Account Settings" icon={Settings} defaultOpen>
+        <div className="space-y-4">
+          {/* Language */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <Globe size={15} className="text-muted-foreground" />
+              <span>Language</span>
             </div>
-            <p className="text-xs text-muted-foreground">Min 8 chars · uppercase · number · special character</p>
-            <button type="submit" disabled={pwLoading}
-              className="w-full rounded-md bg-primary text-primary-foreground py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50">
-              {pwLoading ? "Updating…" : "Update Password"}
+            <select
+              value={language}
+              onChange={e => setLanguage(e.target.value)}
+              className="rounded-md border px-3 py-1.5 text-sm bg-background">
+              <option value="en">English</option>
+              <option value="om">Afaan Oromo</option>
+            </select>
+          </div>
+
+          {/* Email notifications */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <Bell size={15} className="text-muted-foreground" />
+              <span>Email Notifications</span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={emailNotifs}
+              onClick={() => setEmailNotifs(v => !v)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${emailNotifs ? "bg-primary" : "bg-muted"}`}>
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${emailNotifs ? "translate-x-6" : "translate-x-1"}`} />
             </button>
-          </motion.form>
-        )}
-      </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSettingsSave}
+            disabled={settingsLoading}
+            className="w-full rounded-md bg-primary text-primary-foreground py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50">
+            {settingsLoading ? "Saving…" : "Save Settings"}
+          </button>
+        </div>
+      </Section>
     </div>
   );
 }

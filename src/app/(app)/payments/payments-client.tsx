@@ -1,5 +1,7 @@
 "use client";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
+import { Search, X } from "lucide-react";
 
 interface Payment {
   _id: string;
@@ -17,11 +19,23 @@ const statusColors = {
 };
 
 export default function PaymentsClient({ payments, isAdmin }: { payments: Payment[]; isAdmin: boolean }) {
+  const [query, setQuery] = useState("");
   const pending = payments.filter(p => p.status === "pending" || p.status === "overdue");
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return payments;
+    return payments.filter(p =>
+      p.paymentMonth.toLowerCase().includes(q) ||
+      p.status.toLowerCase().includes(q) ||
+      (p.referenceNumber ?? "").toLowerCase().includes(q) ||
+      String(p.amount).includes(q)
+    );
+  }, [payments, query]);
 
   return (
     <div className="space-y-6">
-      {/* Pay Now banner for non-admins with outstanding payments */}
+      {/* Outstanding banner */}
       {!isAdmin && pending.length > 0 && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-xl border border-yellow-300 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800 p-5 flex items-center justify-between gap-4">
@@ -41,6 +55,28 @@ export default function PaymentsClient({ payments, isAdmin }: { payments: Paymen
         </motion.div>
       )}
 
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search by month, status, reference…"
+          className="w-full rounded-md border pl-9 pr-4 py-2 text-sm bg-background"
+        />
+        {query && (
+          <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      {query && (
+        <p className="text-xs text-muted-foreground">
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for "{query}"
+        </p>
+      )}
+
       {/* Payments table */}
       <div className="rounded-xl border overflow-hidden">
         <div className="px-4 py-3 border-b bg-muted font-semibold text-sm">Payment History</div>
@@ -57,9 +93,9 @@ export default function PaymentsClient({ payments, isAdmin }: { payments: Paymen
               </tr>
             </thead>
             <tbody>
-              {payments.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">No payments found</td></tr>
-              ) : payments.map((p, i) => (
+              {filtered.length === 0 ? (
+                <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">No payments match your search</td></tr>
+              ) : filtered.map((p, i) => (
                 <motion.tr key={p._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.04 }}
                   className="border-t hover:bg-accent/50 transition-colors">
