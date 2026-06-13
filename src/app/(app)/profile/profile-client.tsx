@@ -40,21 +40,15 @@ function Section({ title, icon: Icon, children, defaultOpen = false }: {
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-xl border overflow-hidden">
+    <div className="rounded-xl border">
       <button type="button" onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/50">
         <span className="flex items-center gap-2"><Icon size={15} />{title}</span>
         {open ? <ChevronUp size={15} className="text-muted-foreground" /> : <ChevronDown size={15} className="text-muted-foreground" />}
       </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t">
-            <div className="px-4 py-4 space-y-4">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {open && (
+        <div className="border-t px-4 py-4 space-y-4">{children}</div>
+      )}
     </div>
   );
 }
