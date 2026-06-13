@@ -1,7 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
 import { Camera, User, Eye, EyeOff, KeyRound, Settings, Globe, Bell, ChevronDown, ChevronUp } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
   user: {
@@ -131,14 +130,11 @@ export default function ProfileClient({ user }: Props) {
   return (
     <div className="space-y-6">
       {/* Toast */}
-      <AnimatePresence>
-        {toast.msg && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className={`px-4 py-2 rounded-lg text-sm text-center ${toast.type === "error" ? "bg-destructive text-white" : "bg-primary text-primary-foreground"}`}>
-            {toast.msg}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {toast.msg && (
+        <div className={`px-4 py-2 rounded-lg text-sm text-center ${toast.type === "error" ? "bg-destructive text-white" : "bg-primary text-primary-foreground"}`}>
+          {toast.msg}
+        </div>
+      )}
 
       {/* Avatar */}
       <div className="flex flex-col items-center gap-3">
