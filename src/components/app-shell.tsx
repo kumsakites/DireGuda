@@ -35,8 +35,7 @@ export default function AppShell({ role, unreadCount = 0, children }: Props) {
 
       {/* ── Top bar ─────────────────────────────────────────────── */}
       <header
-        className="fixed top-0 right-0 z-30 h-14 flex items-center justify-between px-4 bg-background border-b border-border/20 transition-all duration-300"
-        style={{ left: open ? SIDEBAR_W : 0 }}
+        className="fixed top-0 left-0 right-0 z-30 h-14 flex items-center justify-between px-4 bg-background border-b border-border/20"
       >
         <button onClick={() => setOpen(o => !o)} className="p-2 rounded-lg hover:bg-accent transition-colors" aria-label="Toggle menu">
           {open ? <X size={20} /> : <Menu size={20} />}
@@ -87,11 +86,19 @@ export default function AppShell({ role, unreadCount = 0, children }: Props) {
         )}
       </AnimatePresence>
 
-      {/* ── Page content — shifts right when sidebar opens ─────── */}
-      <div
-        className="transition-all duration-300 pt-14 flex flex-col min-h-screen"
-        style={{ marginLeft: open ? SIDEBAR_W : 0 }}
-      >
+      {/* ── Backdrop (mobile only) ────────────────────────────── */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-10 bg-black/40 lg:hidden"
+            onClick={() => setOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Page content ─────────────────────────────────────── */}
+      <div className="pt-14 flex flex-col min-h-screen">
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {children}
         </main>
