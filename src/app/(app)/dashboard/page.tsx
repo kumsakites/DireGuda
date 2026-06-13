@@ -11,17 +11,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { month } = await searchParams;
 
   const currentMonth = month ?? new Date().toISOString().slice(0, 7);
-  let payments: unknown[] = [];
+  let payments: Array<{ status: string; amount: number; [key: string]: unknown }> = [];
   let users: unknown[] = [];
   try {
     await connectDB();
     const filter: Record<string, unknown> = {};
     if (session?.user.role !== "admin") filter.userId = session?.user.id;
     filter.paymentMonth = currentMonth;
-    payments = await Payment.find(filter)
+    const rawPayments = await Payment.find(filter)
       .populate("userId", "username email")
       .sort({ createdAt: -1 })
       .lean();
+    payments = rawPayments as unknown as typeof payments;
     if (session?.user.role === "admin") {
       users = await User.find({}, "_id username").lean();
     }

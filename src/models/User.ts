@@ -9,6 +9,8 @@ export interface IUser extends Document {
   languagePreference: "om" | "en";
   mustChangePassword: boolean;
   avatar?: string;
+  resetToken?: string;
+  resetTokenExpiry?: Date;
   createdAt: Date;
 }
 
