@@ -12,12 +12,11 @@ export default async function PaymentsPage() {
   let rank = null;
   try {
     await connectDB();
-    const filter: Record<string, unknown> = {};
-    if (!isAdmin) filter.userId = session?.user.id;
+    const filter: Record<string, unknown> = { userId: session?.user.id };
     payments = await Payment.find(filter).sort({ createdAt: -1 }).lean();
 
-    if (!isAdmin && session?.user.id) {
-      // Compute user rank
+    if (session?.user.id) {
+      // Compute rank for any logged-in user (admin or regular)
       const rankings = await Payment.aggregate([
         { $match: { status: "paid" } },
         { $group: { _id: "$userId", totalPaid: { $sum: "$amount" }, paymentCount: { $sum: 1 } } },

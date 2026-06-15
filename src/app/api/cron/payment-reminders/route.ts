@@ -38,7 +38,7 @@ export async function GET(req: Request) {
 
   if (day >= 24 || day <= 5) {
     // Reminder phase: notify users who haven't paid for reminderMonth
-    const users = await User.find({ role: "user" }).lean();
+    const users = await User.find({ isActive: true }).lean();
 
     for (const user of users) {
       // Check if user already has a paid/submitted payment for reminderMonth
@@ -80,7 +80,7 @@ export async function GET(req: Request) {
   let overdueNotified = 0;
   if (day >= 6) {
     const currentMonth = `${year}-${padded(month + 1)}`;
-    const users = await User.find({ role: "user" }).lean();
+    const users = await User.find({ isActive: true }).lean();
 
     for (const user of users) {
       const paid = await Payment.findOne({
@@ -141,7 +141,6 @@ export async function GET(req: Request) {
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
   const oldUsers = await User.find({
-    role: "user",
     isActive: true,
     createdAt: { $lte: oneYearAgo },
   }).lean();

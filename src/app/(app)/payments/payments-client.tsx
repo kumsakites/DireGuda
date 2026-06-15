@@ -126,8 +126,8 @@ export default function PaymentsClient({
         )}
       </AnimatePresence>
 
-      {/* Rank card (user only) */}
-      {!isAdmin && rank && (
+      {/* Rank card */}
+      {rank && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -145,7 +145,7 @@ export default function PaymentsClient({
       )}
 
       {/* Outstanding banner */}
-      {!isAdmin && pending.length > 0 && (
+      {pending.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -168,9 +168,8 @@ export default function PaymentsClient({
         </motion.div>
       )}
 
-      {/* Submit Payment button (user) */}
-      {!isAdmin && (
-        <div className="flex justify-end">
+      {/* Submit Payment button */}
+      <div className="flex justify-end">
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90"
@@ -178,7 +177,6 @@ export default function PaymentsClient({
             <Upload size={16} /> Submit Payment
           </button>
         </div>
-      )}
 
       {/* Submit Payment Modal */}
       <AnimatePresence>
