@@ -21,7 +21,6 @@ const ADMINS = [
 function AdminCarousel() {
   const [index, setIndex] = useState(0);
 
-  // Auto-advance every 3 seconds
   useEffect(() => {
     const t = setInterval(() => setIndex(i => (i + 1) % ADMINS.length), 3000);
     return () => clearInterval(t);
@@ -30,30 +29,29 @@ function AdminCarousel() {
   return (
     <div className="pb-6 px-4">
       <p className="text-center text-white/40 text-xs mb-4 tracking-widest uppercase">System Administrators</p>
-      <div className="relative overflow-hidden rounded-2xl"
+      <div className="rounded-2xl overflow-hidden"
         style={{ background: "rgba(30,30,36,0.6)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <motion.div
-          className="flex"
-          animate={{ x: `-${index * 100}%` }}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
-        >
-          {ADMINS.map((a) => (
-            <div key={a.name} className="w-full shrink-0 flex flex-col sm:flex-row items-center gap-5 px-8 py-6">
-              <img
-                src={a.avatar}
-                alt={a.name}
-                style={{ width: 88, height: 88, borderRadius: "50%", objectFit: "cover", border: "3px solid #F2722B", flexShrink: 0 }}
-              />
-              <div className="text-center sm:text-left">
-                <p className="text-white font-bold text-lg leading-snug">{a.name}</p>
-                <p className="text-white/50 text-sm flex items-center justify-center sm:justify-start gap-1 mt-1">
-                  <ShieldCheck size={13} /> System Administrator
-                </p>
-              </div>
-            </div>
-          ))}
-        </motion.div>
-        {/* Dot indicators */}
+        {/* Show only the active slide — no flex translate needed */}
+        <div className="px-8 py-6 flex flex-col sm:flex-row items-center gap-5 min-h-[120px]">
+          <motion.img
+            key={index}
+            src={ADMINS[index].avatar}
+            alt={ADMINS[index].name}
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -60 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            style={{ width: 88, height: 88, borderRadius: "50%", objectFit: "cover", border: "3px solid #F2722B", flexShrink: 0 }}
+          />
+          <motion.div key={`name-${index}`} className="text-center sm:text-left"
+            initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+            <p className="text-white font-bold text-lg leading-snug">{ADMINS[index].name}</p>
+            <p className="text-white/50 text-sm flex items-center justify-center sm:justify-start gap-1 mt-1">
+              <ShieldCheck size={13} /> System Administrator
+            </p>
+          </motion.div>
+        </div>
         <div className="flex justify-center gap-2 pb-4">
           {ADMINS.map((_, i) => (
             <button key={i} onClick={() => setIndex(i)}
