@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -16,35 +16,52 @@ const ADMINS = [
   { name: "Dr. Galata Tasfa",        avatar: "/Dr.jpg"    },
 ];
 
-// ─── Individual admin cards (separate, not marquee) ──────────────────────────
+// ─── Admin sliding carousel (one card at a time, right→left) ─────────────────
 
-function AdminCards() {
+function AdminCarousel() {
+  const [index, setIndex] = useState(0);
+
+  // Auto-advance every 3 seconds
+  useEffect(() => {
+    const t = setInterval(() => setIndex(i => (i + 1) % ADMINS.length), 3000);
+    return () => clearInterval(t);
+  }, []);
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4 pb-6">
-      {ADMINS.map((a) => (
-        <motion.div key={a.name}
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col items-center gap-3 px-4 py-5 rounded-2xl text-center"
-          style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", backdropFilter: "blur(12px)" }}>
-          {/* Fixed size img — avoids Vercel fill/layout issues */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={a.avatar}
-            alt={a.name}
-            width={80}
-            height={80}
-            className="rounded-full object-cover border-2 border-[#F2722B]"
-            style={{ width: 80, height: 80 }}
-          />
-          <div>
-            <p className="text-white font-semibold text-sm leading-snug">{a.name}</p>
-            <p className="text-white/50 text-xs flex items-center justify-center gap-1 mt-1">
-              <ShieldCheck size={10} /> Administrator
-            </p>
-          </div>
+    <div className="pb-6 px-4">
+      <p className="text-center text-white/40 text-xs mb-4 tracking-widest uppercase">System Administrators</p>
+      <div className="relative overflow-hidden rounded-2xl"
+        style={{ background: "rgba(30,30,36,0.6)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <motion.div
+          className="flex"
+          animate={{ x: `-${index * 100}%` }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+        >
+          {ADMINS.map((a) => (
+            <div key={a.name} className="w-full shrink-0 flex flex-col sm:flex-row items-center gap-5 px-8 py-6">
+              <img
+                src={a.avatar}
+                alt={a.name}
+                style={{ width: 88, height: 88, borderRadius: "50%", objectFit: "cover", border: "3px solid #F2722B", flexShrink: 0 }}
+              />
+              <div className="text-center sm:text-left">
+                <p className="text-white font-bold text-lg leading-snug">{a.name}</p>
+                <p className="text-white/50 text-sm flex items-center justify-center sm:justify-start gap-1 mt-1">
+                  <ShieldCheck size={13} /> System Administrator
+                </p>
+              </div>
+            </div>
+          ))}
         </motion.div>
-      ))}
+        {/* Dot indicators */}
+        <div className="flex justify-center gap-2 pb-4">
+          {ADMINS.map((_, i) => (
+            <button key={i} onClick={() => setIndex(i)}
+              className="w-2 h-2 rounded-full transition-all"
+              style={{ background: i === index ? "#F2722B" : "rgba(255,255,255,0.25)" }} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -324,11 +341,8 @@ export default function LoginClient() {
             </motion.div>
           </div>
 
-          {/* Admin cards */}
-          <div className="pb-6 px-4">
-            <p className="text-center text-white/40 text-xs mb-4 tracking-widest uppercase">System Administrators</p>
-            <AdminCards />
-          </div>
+          {/* Admin carousel */}
+          <AdminCarousel />
         </div>
       </section>
 
