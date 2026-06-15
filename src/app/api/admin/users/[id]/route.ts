@@ -12,6 +12,7 @@ const updateSchema = z.object({
   role: z.enum(["admin", "user"]).optional(),
   languagePreference: z.enum(["en", "om"]).optional(),
   resetPassword: z.boolean().optional(),
+  isActive: z.boolean().optional(),
 });
 
 async function requireAdmin() {

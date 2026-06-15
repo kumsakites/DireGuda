@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, KeyRound, X, Eye, EyeOff, Search, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, KeyRound, X, Eye, EyeOff, Search, Trophy, BarChart3, ChevronDown, ChevronUp, UserX, UserCheck } from "lucide-react";
 
 interface User {
   _id: string;
@@ -12,13 +12,28 @@ interface User {
   role: string;
   languagePreference: string;
   mustChangePassword: boolean;
+  isActive: boolean;
 }
 
-interface Props { initialUsers: User[] }
+interface RankEntry { rank: number; totalPaid: number; paymentCount: number; username: string; _id: string }
+interface MonthlySummary { month: string; total: number; count: number }
+interface UserPaymentSummary { userId: string; totalPaid: number; paymentCount: number }
+
+interface Props {
+  initialUsers: User[];
+  rankings?: RankEntry[];
+  monthlySummary?: MonthlySummary[];
+  userSummaries?: UserPaymentSummary[];
+}
 
 const emptyForm = { username: "", email: "", phone: "", role: "user", languagePreference: "en", password: "" };
 
-export default function AdminUsersClient({ initialUsers }: Props) {
+export default function AdminUsersClient({
+  initialUsers,
+  rankings = [],
+  monthlySummary = [],
+  userSummaries = [],
+}: Props) {
   const t = useTranslations("admin");
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [query, setQuery] = useState("");
@@ -27,6 +42,14 @@ export default function AdminUsersClient({ initialUsers }: Props) {
   const [form, setForm] = useState(emptyForm);
   const [toast, setToast] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showRankings, setShowRankings] = useState(false);
+  const [showMonthly, setShowMonthly] = useState(false);
+
+  const summaryMap = useMemo(() => {
+    const m: Record<string, UserPaymentSummary> = {};
+    userSummaries.forEach(s => { m[s.userId] = s; });
+    return m;
+  }, [userSummaries]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -35,9 +58,7 @@ export default function AdminUsersClient({ initialUsers }: Props) {
       u.username.toLowerCase().includes(q) ||
       (u.email ?? "").toLowerCase().includes(q) ||
       (u.phone ?? "").includes(q) ||
-      u.role.toLowerCase().includes(q) ||
-      u.languagePreference.toLowerCase().includes(q) ||
-      (u.mustChangePassword ? "must change" : "active").includes(q)
+      u.role.toLowerCase().includes(q)
     );
   }, [users, query]);
 
@@ -54,7 +75,7 @@ export default function AdminUsersClient({ initialUsers }: Props) {
     const url = editing ? `/api/admin/users/${editing._id}` : "/api/admin/users";
     const method = editing ? "PATCH" : "POST";
     const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    if (!res.ok) { showToast("Error: " + (await res.json().then(d => d.error).catch(() => res.statusText))); return; }
+    if (!res.ok) { showToast("Error: " + (await res.json().then((d: { error: string }) => d.error).catch(() => res.statusText))); return; }
     const data = await res.json();
     if (editing) {
       setUsers(users.map(u => u._id === data._id ? data : u));
@@ -72,9 +93,26 @@ export default function AdminUsersClient({ initialUsers }: Props) {
     if (res.ok) { setUsers(users.filter(u => u._id !== id)); showToast(t("userDeleted")); }
   }
 
-  async function handleReset(id: string) {
-    await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resetPassword: true }) });
-    showToast(t("resetPassword"));
+  async function handleReset(id: string, username: string) {
+    if (!confirm(`Reset password for ${username}? Their new password will be their username.`)) return;
+    const res = await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resetPassword: true }) });
+    if (res.ok) showToast(`Password reset for ${username}. They must change it on next login.`);
+    else showToast("Failed to reset password");
+  }
+
+  async function handleToggleActive(user: User) {
+    const action = user.isActive ? "deactivate" : "reactivate";
+    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} account for ${user.username}?`)) return;
+    const res = await fetch(`/api/admin/users/${user._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: !user.isActive }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setUsers(users.map(u => u._id === updated._id ? updated : u));
+      showToast(`${user.username} ${user.isActive ? "deactivated" : "reactivated"}.`);
+    }
   }
 
   return (
@@ -88,16 +126,93 @@ export default function AdminUsersClient({ initialUsers }: Props) {
         )}
       </AnimatePresence>
 
+      {/* Collapsible: Monthly Summary */}
+      {monthlySummary.length > 0 && (
+        <div className="rounded-xl border overflow-hidden">
+          <button
+            onClick={() => setShowMonthly(s => !s)}
+            className="w-full px-4 py-3 bg-muted flex items-center justify-between hover:bg-muted/80 transition-colors"
+          >
+            <span className="font-semibold text-sm flex items-center gap-2"><BarChart3 size={16} /> Monthly Revenue Summary</span>
+            {showMonthly ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          <AnimatePresence>
+            {showMonthly && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-medium">Month</th>
+                      <th className="text-left px-4 py-2 font-medium">Payments</th>
+                      <th className="text-left px-4 py-2 font-medium">Total Collected</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlySummary.map(m => (
+                      <tr key={m.month} className="border-t hover:bg-accent/30 transition-colors">
+                        <td className="px-4 py-2">{m.month}</td>
+                        <td className="px-4 py-2 text-muted-foreground">{m.count}</td>
+                        <td className="px-4 py-2 font-medium">ETB {m.total.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Collapsible: Full Leaderboard */}
+      {rankings.length > 0 && (
+        <div className="rounded-xl border overflow-hidden">
+          <button
+            onClick={() => setShowRankings(s => !s)}
+            className="w-full px-4 py-3 bg-muted flex items-center justify-between hover:bg-muted/80 transition-colors"
+          >
+            <span className="font-semibold text-sm flex items-center gap-2"><Trophy size={16} className="text-yellow-500" /> Payment Leaderboard</span>
+            {showRankings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          <AnimatePresence>
+            {showRankings && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-medium">Rank</th>
+                      <th className="text-left px-4 py-2 font-medium">User</th>
+                      <th className="text-left px-4 py-2 font-medium">Payments</th>
+                      <th className="text-left px-4 py-2 font-medium">Total Paid</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rankings.map(r => (
+                      <tr key={r._id} className="border-t hover:bg-accent/30 transition-colors">
+                        <td className="px-4 py-2">
+                          <span className={`font-bold ${r.rank === 1 ? "text-yellow-500" : r.rank === 2 ? "text-gray-400" : r.rank === 3 ? "text-amber-600" : ""}`}>
+                            #{r.rank}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 font-medium">{r.username}</td>
+                        <td className="px-4 py-2 text-muted-foreground">{r.paymentCount}</td>
+                        <td className="px-4 py-2 font-medium">ETB {r.totalPaid.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
       {/* Actions row */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search by name, email, phone, role, status…"
-            className="w-full rounded-md border pl-9 pr-4 py-2 text-sm bg-background"
-          />
+          <input value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Search by name, email, phone, role…"
+            className="w-full rounded-md border pl-9 pr-4 py-2 text-sm bg-background" />
           {query && (
             <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               <X size={14} />
@@ -110,19 +225,12 @@ export default function AdminUsersClient({ initialUsers }: Props) {
         </button>
       </div>
 
-      {/* Result count */}
-      {query && (
-        <p className="text-xs text-muted-foreground">
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for "{query}"
-        </p>
-      )}
-
       {/* User table */}
       <div className="rounded-xl border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted text-muted-foreground">
             <tr>
-              {[t("username"), t("email"), t("phone"), t("role"), t("language"), "Status"].map(h => (
+              {[t("username"), t("email"), t("phone"), t("role"), "Total Paid", "Status"].map(h => (
                 <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
               ))}
               <th className="px-4 py-3" />
@@ -131,32 +239,49 @@ export default function AdminUsersClient({ initialUsers }: Props) {
           <tbody>
             {filtered.length === 0 ? (
               <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">No users match your search</td></tr>
-            ) : filtered.map((u, i) => (
-              <motion.tr key={u._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
-                className="border-t hover:bg-accent/50 transition-colors">
-                <td className="px-4 py-3 font-medium">{u.username}</td>
-                <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{u.phone ?? "—"}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.role === "admin" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "bg-muted text-muted-foreground"}`}>
-                    {u.role}
-                  </span>
-                </td>
-                <td className="px-4 py-3 uppercase text-xs">{u.languagePreference}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.mustChangePassword ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"}`}>
-                    {u.mustChangePassword ? "Must change pw" : "Active"}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2 justify-end">
-                    <button onClick={() => openEdit(u)} className="p-1.5 rounded hover:bg-accent" aria-label="Edit"><Pencil size={14} /></button>
-                    <button onClick={() => handleReset(u._id)} className="p-1.5 rounded hover:bg-accent" aria-label="Reset password"><KeyRound size={14} /></button>
-                    <button onClick={() => handleDelete(u._id)} className="p-1.5 rounded hover:bg-destructive/10 text-destructive" aria-label="Delete"><Trash2 size={14} /></button>
-                  </div>
-                </td>
-              </motion.tr>
-            ))}
+            ) : filtered.map((u, i) => {
+              const summary = summaryMap[u._id];
+              return (
+                <motion.tr key={u._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
+                  className="border-t hover:bg-accent/50 transition-colors">
+                  <td className="px-4 py-3 font-medium">{u.username}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{u.phone ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.role === "admin" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "bg-muted text-muted-foreground"}`}>
+                      {u.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-medium">
+                    {summary ? `ETB ${summary.totalPaid.toLocaleString()}` : "—"}
+                    {summary ? <span className="text-xs text-muted-foreground ml-1">({summary.paymentCount}×)</span> : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      !u.isActive
+                        ? "bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                        : u.mustChangePassword
+                        ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200"
+                        : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
+                    }`}>
+                      {!u.isActive ? "Deactivated" : u.mustChangePassword ? "Must change pw" : "Active"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => openEdit(u)} className="p-1.5 rounded hover:bg-accent" title="Edit user"><Pencil size={14} /></button>
+                      <button onClick={() => handleReset(u._id, u.username)} className="p-1.5 rounded hover:bg-accent" title="Recover / reset password"><KeyRound size={14} /></button>
+                      <button onClick={() => handleToggleActive(u)}
+                        className={`p-1.5 rounded ${u.isActive ? "hover:bg-orange-100 text-orange-500" : "hover:bg-green-100 text-green-600"}`}
+                        title={u.isActive ? "Deactivate account" : "Reactivate account"}>
+                        {u.isActive ? <UserX size={14} /> : <UserCheck size={14} />}
+                      </button>
+                      <button onClick={() => handleDelete(u._id)} className="p-1.5 rounded hover:bg-destructive/10 text-destructive" title="Delete user"><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </motion.tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

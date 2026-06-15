@@ -3,20 +3,24 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp, Clock, AlertCircle, CheckCircle, Plus, X, Search } from "lucide-react";
+import { TrendingUp, Clock, AlertCircle, CheckCircle, Plus, X, Search, Trophy, BarChart3 } from "lucide-react";
 
 interface Payment {
   _id: string;
   amount: number;
-  status: "paid" | "pending" | "overdue";
+  status: "paid" | "pending" | "overdue" | "submitted";
   paymentMonth: string;
   datePaid?: string;
   referenceNumber?: string;
+  screenshotUrl?: string;
+  userSubmitted?: boolean;
   userId: { username: string; email?: string } | string;
 }
 
 interface Stats { paid: number; pending: number; overdue: number; total: number }
 interface UserOption { _id: string; username: string }
+interface MonthlySummary { month: string; total: number; count: number }
+interface RankEntry { rank: number; totalPaid: number; paymentCount: number; username: string; _id: string }
 
 interface Props {
   payments: Payment[];
@@ -24,15 +28,28 @@ interface Props {
   currentMonth: string;
   isAdmin: boolean;
   users?: UserOption[];
+  monthlySummary?: MonthlySummary[];
+  rankings?: RankEntry[];
+  grandTotal?: number;
 }
 
 const statusColors = {
   paid: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200",
   pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200",
   overdue: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200",
+  submitted: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200",
 };
 
-export default function DashboardClient({ payments: initial, stats: initialStats, currentMonth, isAdmin, users = [] }: Props) {
+export default function DashboardClient({
+  payments: initial,
+  stats: initialStats,
+  currentMonth,
+  isAdmin,
+  users = [],
+  monthlySummary = [],
+  rankings = [],
+  grandTotal = 0,
+}: Props) {
   const t = useTranslations("dashboard");
   const pt = useTranslations("payments");
   const router = useRouter();
@@ -84,7 +101,6 @@ export default function DashboardClient({ payments: initial, stats: initialStats
 
   return (
     <div className="space-y-6">
-      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -93,6 +109,20 @@ export default function DashboardClient({ payments: initial, stats: initialStats
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Grand total banner (admin) */}
+      {isAdmin && grandTotal > 0 && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-green-300 bg-green-50 dark:bg-green-950 dark:border-green-800 p-4 flex items-center gap-3">
+          <BarChart3 size={24} className="text-green-600 shrink-0" />
+          <div>
+            <p className="font-semibold text-green-800 dark:text-green-200">
+              Platform Grand Total: ETB {grandTotal.toLocaleString()}
+            </p>
+            <p className="text-xs text-green-700 dark:text-green-300">All-time total of confirmed payments</p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Admin: Add Payment button */}
       {isAdmin && (
@@ -143,11 +173,6 @@ export default function DashboardClient({ payments: initial, stats: initialStats
                     <option value="overdue">Overdue</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-sm font-medium block mb-1">Reference (optional)</label>
-                  <input value={form.referenceNumber} onChange={e => setForm({ ...form, referenceNumber: e.target.value })}
-                    className="w-full rounded-md border px-3 py-2 text-sm bg-background" />
-                </div>
                 <div className="flex gap-2 pt-2">
                   <button type="submit" className="flex-1 bg-primary text-primary-foreground py-2 rounded-md text-sm font-medium">Add</button>
                   <button type="button" onClick={() => setShowAdd(false)} className="flex-1 border py-2 rounded-md text-sm">Cancel</button>
@@ -157,15 +182,12 @@ export default function DashboardClient({ payments: initial, stats: initialStats
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card, i) => (
-          <motion.div
-            key={card.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-            className="bg-card border rounded-xl p-4 space-y-2"
-          >
+          <motion.div key={card.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08 }} className="bg-card border rounded-xl p-4 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">{card.label}</p>
               <card.icon size={20} className={card.color} />
@@ -175,34 +197,88 @@ export default function DashboardClient({ payments: initial, stats: initialStats
         ))}
       </div>
 
-      {/* Stats cards */}
+      {/* Monthly summary (admin) */}
+      {isAdmin && monthlySummary.length > 0 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+          className="rounded-xl border overflow-hidden">
+          <div className="px-4 py-3 border-b bg-muted font-semibold text-sm flex items-center gap-2">
+            <BarChart3 size={16} /> Monthly Revenue Summary
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">Month</th>
+                  <th className="text-left px-4 py-2 font-medium">Payments</th>
+                  <th className="text-left px-4 py-2 font-medium">Total Collected</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlySummary.map((m) => (
+                  <tr key={m.month} className="border-t hover:bg-accent/30 transition-colors">
+                    <td className="px-4 py-2">{m.month}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{m.count}</td>
+                    <td className="px-4 py-2 font-medium">ETB {m.total.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Rankings (admin sees full leaderboard) */}
+      {isAdmin && rankings.length > 0 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
+          className="rounded-xl border overflow-hidden">
+          <div className="px-4 py-3 border-b bg-muted font-semibold text-sm flex items-center gap-2">
+            <Trophy size={16} className="text-yellow-500" /> Payment Leaderboard
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">Rank</th>
+                  <th className="text-left px-4 py-2 font-medium">User</th>
+                  <th className="text-left px-4 py-2 font-medium">Payments</th>
+                  <th className="text-left px-4 py-2 font-medium">Total Paid</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rankings.map((r) => (
+                  <tr key={r._id} className="border-t hover:bg-accent/30 transition-colors">
+                    <td className="px-4 py-2">
+                      <span className={`font-bold ${r.rank === 1 ? "text-yellow-500" : r.rank === 2 ? "text-gray-400" : r.rank === 3 ? "text-amber-600" : ""}`}>
+                        #{r.rank}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 font-medium">{r.username}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{r.paymentCount}</td>
+                    <td className="px-4 py-2 font-medium">ETB {r.totalPaid.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Month filter */}
       <div className="flex items-center gap-3">
         <label className="text-sm text-muted-foreground">{t("filterMonth")}</label>
-        <input
-          type="month"
-          value={month}
-          onChange={e => handleMonthChange(e.target.value)}
-          className="rounded-md border px-3 py-1.5 text-sm bg-background"
-        />
+        <input type="month" value={month} onChange={e => handleMonthChange(e.target.value)}
+          className="rounded-md border px-3 py-1.5 text-sm bg-background" />
       </div>
 
       {/* Payments table */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="rounded-xl border overflow-hidden"
-      >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+        className="rounded-xl border overflow-hidden">
         <div className="px-4 py-3 border-b bg-muted flex items-center justify-between gap-3 flex-wrap">
           <h2 className="font-semibold">{t("recentPayments")}</h2>
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={tableQuery}
-              onChange={e => setTableQuery(e.target.value)}
-              placeholder="Search payments…"
-              className="rounded-md border pl-8 pr-8 py-1.5 text-sm bg-background w-52"
-            />
+            <input value={tableQuery} onChange={e => setTableQuery(e.target.value)} placeholder="Search…"
+              className="rounded-md border pl-8 pr-8 py-1.5 text-sm bg-background w-44" />
             {tableQuery && (
               <button onClick={() => setTableQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 <X size={13} />
@@ -218,14 +294,14 @@ export default function DashboardClient({ payments: initial, stats: initialStats
                 <th className="text-left px-4 py-3 font-medium">{pt("month")}</th>
                 <th className="text-left px-4 py-3 font-medium">{pt("amount")}</th>
                 <th className="text-left px-4 py-3 font-medium">{pt("status")}</th>
-                <th className="text-left px-4 py-3 font-medium">{pt("reference")}</th>
+                <th className="text-left px-4 py-3 font-medium">Receipt</th>
                 <th className="text-left px-4 py-3 font-medium">{pt("datePaid")}</th>
-                {!isAdmin && <th className="px-4 py-3" />}
+                {isAdmin && <th className="px-4 py-3 font-medium">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {filteredPayments.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">
+                <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">
                   {tableQuery ? `No payments match "${tableQuery}"` : "—"}
                 </td></tr>
               ) : filteredPayments.map((p, i) => (
@@ -241,22 +317,23 @@ export default function DashboardClient({ payments: initial, stats: initialStats
                   <td className="px-4 py-3 font-medium">ETB {p.amount.toLocaleString()}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[p.status]}`}>
-                      {pt(p.status)}
+                      {p.status === "submitted" ? "Awaiting Approval" : pt(p.status)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.referenceNumber ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    {p.screenshotUrl ? (
+                      <a href={p.screenshotUrl} target="_blank" rel="noreferrer" className="text-primary text-xs underline">View</a>
+                    ) : "—"}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {p.datePaid ? new Date(p.datePaid).toLocaleDateString() : "—"}
                   </td>
-                  {!isAdmin && (
+                  {isAdmin && (
                     <td className="px-4 py-3">
-                      {(p.status === "pending" || p.status === "overdue") && (
-                        <button
-                          onClick={() => alert("Payment integration coming soon. Please contact admin.")}
-                          className={`px-3 py-1 rounded-md text-xs font-medium text-white ${p.status === "overdue" ? "bg-red-500 hover:bg-red-600" : "bg-primary hover:bg-primary/90"}`}
-                        >
-                          Pay Now
-                        </button>
+                      {p.status === "submitted" && (
+                        <div className="flex gap-1.5">
+                          <ApproveRejectButtons paymentId={p._id} onDone={() => router.refresh()} />
+                        </div>
                       )}
                     </td>
                   )}
@@ -267,5 +344,33 @@ export default function DashboardClient({ payments: initial, stats: initialStats
         </div>
       </motion.div>
     </div>
+  );
+}
+
+function ApproveRejectButtons({ paymentId, onDone }: { paymentId: string; onDone: () => void }) {
+  const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
+
+  async function act(action: "approve" | "reject") {
+    setLoading(action);
+    await fetch(`/api/payments/${paymentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    setLoading(null);
+    onDone();
+  }
+
+  return (
+    <>
+      <button disabled={!!loading} onClick={() => act("approve")}
+        className="px-2 py-1 text-xs rounded bg-green-500 text-white hover:bg-green-600 disabled:opacity-60">
+        {loading === "approve" ? "…" : "Approve"}
+      </button>
+      <button disabled={!!loading} onClick={() => act("reject")}
+        className="px-2 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-60">
+        {loading === "reject" ? "…" : "Reject"}
+      </button>
+    </>
   );
 }
