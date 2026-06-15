@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Eye, EyeOff, ShieldCheck, Send, Target, Eye as EyeIcon, Flag, Star, Heart, Mail, Phone, MapPin } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Send, Target, Eye as EyeIcon, Flag, Star, Heart, Mail, Phone, MapPin, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
@@ -16,32 +16,35 @@ const ADMINS = [
   { name: "Dr. Galata Tasfa",        avatar: "/Dr.jpg"    },
 ];
 
-// ─── Marquee ─────────────────────────────────────────────────────────────────
+// ─── Individual admin cards (separate, not marquee) ──────────────────────────
 
-const MARQUEE_ITEMS = [...ADMINS, ...ADMINS]; // duplicate for seamless loop
-
-function AdminMarquee() {
+function AdminCards() {
   return (
-    <div className="w-full overflow-hidden py-2"
-      style={{ WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent)" }}>
-      <motion.div className="flex gap-4"
-        animate={{ x: [0, "-50%"] }}
-        transition={{ duration: 18, repeat: Infinity, ease: "linear" }}>
-        {MARQUEE_ITEMS.map((a, i) => (
-          <div key={i} className="flex items-center gap-3 px-5 py-3 rounded-xl shrink-0"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}>
-            <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-[#F2722B] shrink-0">
-              <Image src={a.avatar} alt={a.name} fill className="object-cover" sizes="44px" />
-            </div>
-            <div>
-              <p className="text-white font-semibold text-sm leading-tight whitespace-nowrap">{a.name}</p>
-              <p className="text-white/50 text-xs flex items-center gap-1 mt-0.5">
-                <ShieldCheck size={10} /> Administrator
-              </p>
-            </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4 pb-6">
+      {ADMINS.map((a) => (
+        <motion.div key={a.name}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center gap-3 px-4 py-5 rounded-2xl text-center"
+          style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", backdropFilter: "blur(12px)" }}>
+          {/* Fixed size img — avoids Vercel fill/layout issues */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={a.avatar}
+            alt={a.name}
+            width={80}
+            height={80}
+            className="rounded-full object-cover border-2 border-[#F2722B]"
+            style={{ width: 80, height: 80 }}
+          />
+          <div>
+            <p className="text-white font-semibold text-sm leading-snug">{a.name}</p>
+            <p className="text-white/50 text-xs flex items-center justify-center gap-1 mt-1">
+              <ShieldCheck size={10} /> Administrator
+            </p>
           </div>
-        ))}
-      </motion.div>
+        </motion.div>
+      ))}
     </div>
   );
 }
@@ -189,6 +192,11 @@ export default function LoginClient() {
   const [showPassword, setShowPassword] = useState(false);
   const contactRef = useRef<HTMLDivElement>(null);
 
+  async function switchLang(lang: string) {
+    await fetch("/api/locale", { method: "POST", body: JSON.stringify({ locale: lang }) });
+    router.refresh();
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -231,11 +239,23 @@ export default function LoginClient() {
                 style={{ background: "#F2722B" }}>D</div>
               <span className="text-white font-bold text-lg tracking-wide">DireGuda</span>
             </div>
-            <button onClick={() => contactRef.current?.scrollIntoView({ behavior: "smooth" })}
-              className="px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all active:scale-95"
-              style={{ background: "linear-gradient(135deg,#F2722B,#e05a1a)", boxShadow: "0 4px 16px rgba(242,114,43,0.4)" }}>
-              Get Started
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Language toggle */}
+              <div className="flex items-center gap-1 rounded-lg px-2 py-1.5" style={{ background: "rgba(255,255,255,0.1)" }}>
+                <Globe size={13} className="text-white/60" />
+                <select onChange={e => switchLang(e.target.value)} defaultValue=""
+                  className="appearance-none bg-transparent text-xs text-white/70 cursor-pointer focus:outline-none pr-1">
+                  <option value="" disabled hidden>Lang</option>
+                  <option value="en">English</option>
+                  <option value="om">Afaan Oromo</option>
+                </select>
+              </div>
+              <button onClick={() => contactRef.current?.scrollIntoView({ behavior: "smooth" })}
+                className="px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all active:scale-95"
+                style={{ background: "linear-gradient(135deg,#F2722B,#e05a1a)", boxShadow: "0 4px 16px rgba(242,114,43,0.4)" }}>
+                Get Started
+              </button>
+            </div>
           </nav>
 
           {/* Hero content */}
@@ -304,13 +324,10 @@ export default function LoginClient() {
             </motion.div>
           </div>
 
-          {/* Admin marquee */}
+          {/* Admin cards */}
           <div className="pb-6 px-4">
-            <div className="rounded-2xl overflow-hidden py-1"
-              style={{ background: "rgba(30,30,36,0.6)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <p className="text-center text-white/40 text-xs mb-2 pt-2 tracking-widest uppercase">System Administrators</p>
-              <AdminMarquee />
-            </div>
+            <p className="text-center text-white/40 text-xs mb-4 tracking-widest uppercase">System Administrators</p>
+            <AdminCards />
           </div>
         </div>
       </section>
